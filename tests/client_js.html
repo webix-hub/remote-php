@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script type="text/javascript" src="/webix/core/codebase/webix.js"></script>
+	<link rel="stylesheet" type="text/css" href="//cdn.webix.com/edge/webix.css">
+	<script type="text/javascript" src="./server.php"></script>
+</head>
+<body>
+
+	<script type="text/javascript">
+		var sum = webix.remote.add(3,2);
+		var mul = webix.remote.data.mul(3,2);
+		var use = webix.remote.user;
+		var err = webix.remote.error();
+
+		function check(name, a, b){
+			if (a == b)
+				webix.message(name + " = " + a);
+			else
+				webix.message({
+					type:"error",
+					text:name + " = " + a + "(" + b + ")"
+				});
+		}
+
+		function error(str){
+			return function(){
+				webix.message({
+					type:"error",
+					text:str + " is broken"
+				});
+			};
+		};
+
+		sum.then(function(res){  check("sum", res, 5); }, error("sum"));
+		mul.then(function(res){  check("mul", res, 6); }, error("mul"));
+		
+		check("user", use, 1);
+		err.then(error("error"), function(res){  check("error", res, "Dummy"); });
+
+	</script>
+
+</body>
+</html>

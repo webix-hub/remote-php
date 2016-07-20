@@ -1,0 +1,15 @@
+{
+    "name": "webix/remote",
+    "description": "PHP backend for Webix Remote",
+    "homepage": "http://webix.com/",
+    "keywords": ["webix","remote"],
+    "license": "MIT",
+    "type": "library",
+    "require": {
+        "php": ">=5.6.0"
+    },
+    "autoload": {
+        "psr-4": {"Webix\\Remote\\": "sources/"}
+    },
+    "prefer-stable": true
+}
