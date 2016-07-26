@@ -3,16 +3,11 @@ Webix Remote for PHP
 
 Simple RPC for Browser <-> Server communications
 
-### installation
-
-```
-composer require webix/remote
-```
 
 ### Server side init
 
 
-```
+```php
 <?php
 //api.php
 
@@ -46,7 +41,7 @@ $api->end();
 
 ### Client side usage
 
-```
+```html
 <script src="http://cdn.webix.com/edge/webix.js"></script>
 <script src="api.php"></script>
 <script>
