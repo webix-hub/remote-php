@@ -12,17 +12,27 @@ $key = "SomePerUserSecret";
 $api = new Webix\Remote\Server($key);
 
 //add function
-$api->addMethod("add", function($a, $b){
+$api->setMethod("add", function($a, $b){
 	return $a + $b;
 });
-$api->addMethod("error", function(){
+$api->setMethod("error", function(){
 	throw new \Exception("Dummy");
 });
 
 //add static value
-$api->addData("user", "1");
+$api->setData("user", "1");
 
 //add class
-$api->addClass("data", new DataDao());
+$api->setClass("data", new DataDao());
+
+//access modificator
+
+$api->setMethod("admin@adminAdd", function($a, $b){
+	return $a + $b;
+});
+$api->setMethod("user@userAdd", function($a, $b){
+	return $a + $b;
+});
+$api->setClass("admin@adminDAO", new DataDao());
 
 $api->end();

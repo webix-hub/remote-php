@@ -20,15 +20,15 @@ $key = $_SESSION["csrf-key"];
 $api = new Webix\Remote\Server($key);
 
 //add function
-$api->addMethod("add", function($a, $b){
+$api->setMethod("add", function($a, $b){
 	return $a + $b;
 });
-$api->addMethod("error", function(){
+$api->setMethod("error", function(){
 	throw new \Exception("Dummy");
 });
 
 //add static value
-$api->addData("user", "1");
+$api->setData("user", "1");
 
 //add class
 class DataDao{
@@ -37,7 +37,7 @@ class DataDao{
 	}
 }
 
-$api->addClass("data", new DataDao());
+$api->setClass("data", new DataDao());
 
 
 $api->end();

@@ -4,8 +4,8 @@ namespace Webix\Remote;
 require(__DIR__."/XssFilter.php");
 
 class Server{
-	public $exposeFullAPI = true;
 	public $parser;
+	public $exposeFullAPI = true;
 	public $filter;
 
 	private $user;
@@ -32,22 +32,31 @@ class Server{
 		die();
 	}
 
-	function addData($name, $data){
+	private function decodeName($name, $obj, $access){
+		$parts = explode("@", $name);
+		if (sizeof($parts) == 1)
+			$parts = [["all"], $name];
+		else
+			$parts[0] = explode(",", $parts[0]);
+		
+		$parts[] = $obj === false ? $parts[1] : $obj;
+		$parts[] = $access;
+
+		return  $parts;		
+	}
+
+	function setData($name, $data){
 		$this->data[$name] = $data;
 	}
 
-	function addClass($name, $obj = false){
-		if ($obj === false)
-			$obj = $name;
-
-		$this->classes[$name] = $obj;
+	function setClass($name, $obj = false, $access = false){
+		$code = $this->decodeName($name, $obj, $access);
+		$this->classes[$code[1]] = $code;
 	}
 
-	function addMethod($name, $code = false){
-		if ($code === false)
-			$code = $name;
-
-		$this->methods[$name] = $code;
+	function setMethod($name, $obj = false){
+		$code = $this->decodeName($name, $obj, false);
+		$this->methods[$code[1]] = $code;
 	}
 
 	function end(){
@@ -82,13 +91,14 @@ class Server{
 				$class = $this->classes[$parts[0]];
 				$this->filter->filterAll($params);
 				if ($this->isAllowedMethod($class, $parts[1]))
-					$result = call_user_func_array(array($class, $parts[1]), $params);
+					$result = call_user_func_array(array($class[2], $parts[1]), $params);
 				else 
-					throw new Exception("Access denied");
+					throw new \Exception("Access denied");
 			} else {
 				$this->filter->filterAll($params);
 				$code = $this->methods[$name];
-				$result = call_user_func_array($code, $params);
+				if ($this->isAllowedMethod($code, false))
+					$result = call_user_func_array($code[2], $params);
 			}
 		} catch(\Exception $e){
 			return [ "__webix_remote_error" => $e->getMessage() ];
@@ -99,28 +109,27 @@ class Server{
 
 	protected function checkCSRF($key){
 		if ($this->session && $key != $this->session)
-			throw new Exception("Invalid CSRF token");
+			throw new \Exception("Invalid CSRF token");
 	}
 
 	protected function isAllowedMethod($obj, $method){
-		$access = property_exists($obj, "apiAccess") ? $obj->apiAccess : true;
+		$access = $obj[0];
+		$facade = $obj[3];
+		if ($facade && $method){
+			$access = isset($facade[$method]) ? $facade[$method] : (isset($facade["*"]) ? $facade["*"] : false);
+			if ($access === false || $access === true) return $access;
+			if (is_string($access))
+				$access = explode(",", $access);
+		}
 
-		if (is_array($access))
-			@$access = $access[$method] ? $access[$method] : ($access["*"] ? $access["*"] :false);
 
-		//directly allowed or denied
-		if ($access === true || $access === false)
-			return $access;
-
-		if (!$this->user)
-			return false;
-
-		//allowed for logged in users
-		if ($access === "" || $access === "user")
-			return true;
-
-		//allowed for specific groups of users
-		return $access === $this->user["group"];
+		if (in_array("all", $access)) return true;
+		if ($this->user){
+			if (in_array("user", $access)) return true;
+			$role = isset($this->user["role"]) ? $this->user["role"] : "";
+			if (in_array($role, $access)) return true;
+		}
+		return false;
 	}
 
 	protected function toJSON(){
@@ -129,19 +138,29 @@ class Server{
 		$data['$vars'] = [];
 
 		foreach($this->methods as $name => $code)
-			$data[$name] = 1;
+			if ($this->exposeFullAPI || $this->isAllowedMethod($code, false))
+				$data[$name] = 1;
 
 		foreach($this->data as $name => $value)
 			$data['$vars'][$name] = $value;
 
 		foreach($this->classes as $name => $obj){
 			$subdata = array();
-			$names = property_exists($obj, "apiMethods") ? $obj->apiMethods : get_class_methods($obj);
+			$names = get_class_methods($obj[2]);
+			$facade = $obj[3];
 
 			foreach ($names as $mname)
-				if ($mname != "__construct")
+				if ($mname != "__construct"){
+					if ($facade){
+						if (isset($facade[$mname])){
+							if ($facade[$mname] === false) continue;
+						} else {
+							if (isset($facade["*"]) && $facade["*"] === false ) continue;
+						}
+					}
 					if ($this->exposeFullAPI || $this->isAllowedMethod($obj, $mname))
 						$subdata[$mname] = 1;
+				}
 
 			$data[$name] = $subdata;
 		}

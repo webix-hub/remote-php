@@ -7,21 +7,20 @@ class Client{
 
 		$this->url = $url;
 		$this->api = json_decode(substr($data, 13, strlen($data)-15), true);
-		$this->token = $this->get('$key');
+		$this->token = isset($this->api["\$key"]) ? $this->api["\$key"] : "";
 	}
 
 	public function call($method, ...$args){
 		$pack = [
 			"key"  => $this->token,
-			"name" => $method,
-			"data" => json_encode($args)
+			"payload" => json_encode([["name"=>$method, "args" => $args]])
 		];
 
 		$result = $this->post($this->url, $pack);
 		$obj = json_decode($result, true);
 
 		if ($obj && isset($obj["data"])){
-			$data = $obj["data"];
+			$data = $obj["data"][0];
 			if (is_array($data) && isset($data["__webix_remote_error"]))
 				throw new \Exception($data["__webix_remote_error"]);
 			return $data;
@@ -30,8 +29,8 @@ class Client{
 	}
 
 	public function get($prop){
-		if (isset($this->api[$prop]))
-			return $this->api[$prop];
+		if (isset($this->api["\$vars"][$prop]))
+			return $this->api["\$vars"][$prop];
 		return null;
 	}
 
